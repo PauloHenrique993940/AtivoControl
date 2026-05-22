@@ -1,0 +1,50 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    /* Fundo branco e texto escuro para melhor contraste */
+    @apply bg-white text-gray-900 font-sans antialiased;
+  }
+
+  /* Scrollbar Tática */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0B1B32;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #1B365D;
+    border-radius: 10px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #C8102E;
+  }
+}
+
+@layer utilities {
+  .animate-slow-spin {
+    animation: spin 6s linear infinite;
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@layer components {
+  .btn-tactical {
+    @apply bg-ssp-navy hover:bg-ssp-navy/80 text-white font-bold py-2 px-4 rounded-lg border-b-2 border-ssp-red transition-all active:translate-y-0.5;
+  }
+  
+  .input-tactical {
+    @apply bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-1 focus:ring-ssp-gold outline-none transition-all;
+  }
+}

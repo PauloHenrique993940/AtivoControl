@@ -1,0 +1,91 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   // ADMIN, GESTOR_ARMARIA, OPERADOR, AUDITOR
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  movements Movement[]
+  auditLogs AuditLog[]
+}
+
+model Armament {
+  id                 String   @id @default(uuid())
+  tipo               String   // Ex: Pistola, Fuzil
+  marca              String
+  modelo             String
+  calibre            String
+  numSerie           String   @unique
+  numRegistro        String   @unique
+  dataAquisicao      DateTime
+  status             String   @default("ESTOQUE") // ESTOQUE, USO, MANUTENCAO, BLOQUEADA, BAIXADA
+  local              String
+  observacoes        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  movements Movement[]
+}
+
+model Ammunition {
+  id          String   @id @default(uuid())
+  tipo        String
+  calibre     String
+  quantidade  Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  movements Movement[]
+}
+
+model Responsible {
+  id                     String   @id @default(uuid())
+  nome                   String
+  identificacaoFuncional String   @unique
+  setor                  String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  movements Movement[]
+}
+
+model Movement {
+  id            String   @id @default(uuid())
+  tipo          String   // RETIRADA, DEVOLUCAO, TRANSFERENCIA, MANUTENCAO
+  data          DateTime @default(now())
+  motivo        String?
+  
+  armamentId    String?
+  armament      Armament? @relation(fields: [armamentId], references: [id])
+  
+  ammunitionId  String?
+  ammunition    Ammunition? @relation(fields: [ammunitionId], references: [id])
+  
+  responsibleId String?
+  responsible   Responsible? @relation(fields: [responsibleId], references: [id])
+  
+  userId        String
+  user          User      @relation(fields: [userId], references: [id])
+
+  createdAt     DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  acao      String   // Ex: Alteração de status, Novo cadastro
+  detalhes  String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  data      DateTime @default(now())
+}
