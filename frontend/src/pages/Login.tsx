@@ -1,27 +1,32 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { message } from '../services/ui';
+import { Feedback } from '../components/Feedback';
 import { ShieldCheck, Lock, User, Crosshair, Activity } from 'lucide-react';
 
 export const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const { login } = useAuth();
+  const { login, isAuthenticated, ready } = useAuth();
   const navigate = useNavigate();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  if (ready && isAuthenticated) return <Navigate to="/" replace />;
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setError('');
     try {
       const response = await api.post('/auth/login', { email, password });
       const { token, user } = response.data;
       login(token, user);
       navigate('/');
     } catch (error) {
-      alert('Falha na autenticação. Verifique seu e-mail e senha.');
+      setError(message(error));
     } finally {
       setIsLoading(false);
     }
@@ -105,6 +110,7 @@ export const Login = () => {
           </div>
 
           <form onSubmit={handleLogin} className="space-y-8">
+            <Feedback error={error} />
             <div className="space-y-3">
               <label className="text-xs font-black text-ssp-navy uppercase tracking-widest flex items-center gap-2">
                 <User size={14} className="text-ssp-red" /> Credencial do Agente

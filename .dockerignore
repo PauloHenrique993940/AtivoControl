@@ -7,5 +7,7 @@
 **/*.db
 docs/
 scripts/
+tests/
+.tmp/
 .agents/
 skills-lock.json

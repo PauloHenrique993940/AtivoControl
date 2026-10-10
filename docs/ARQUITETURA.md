@@ -75,6 +75,7 @@ flowchart LR
 erDiagram
   User ||--o{ Movement : registra
   User ||--o{ AuditLog : possui
+  User ||--o{ NotificationRead : le
   Armament |o--o{ Movement : associado
   Ammunition |o--o{ Movement : associada
   Responsible |o--o{ Movement : associado
@@ -83,6 +84,9 @@ erDiagram
     string email UK
     string password
     string role
+    boolean active
+    int tokenVersion
+    json preferences
   }
   Armament {
     string id PK
@@ -109,6 +113,8 @@ erDiagram
     string ammunitionId FK
     string responsibleId FK
     string tipo
+    int quantidade
+    string destino
     datetime data
   }
   AuditLog {
@@ -117,6 +123,16 @@ erDiagram
     string acao
     string detalhes
     datetime data
+  }
+  SystemSettings {
+    string id PK
+    json data
+    datetime updatedAt
+  }
+  NotificationRead {
+    string userId PK,FK
+    string key PK
+    datetime readAt
   }
 ```
 
@@ -128,7 +144,8 @@ Todo movimento tem usuário; os demais vínculos são opcionais. Senhas são has
 | --- | --- |
 | `api/index.ts` | Entrada da função Vercel. |
 | `backend/server.ts` | Express, Swagger e saúde. |
-| `backend/controllers/`, `routes/`, `middlewares/` | Endpoints e JWT. |
+| `backend/routes/`, `services/`, `middlewares/` | Endpoints, regras de negócio e JWT. |
+| `backend/lib/domain.ts` | Validação, transações, permissões e erros. |
 | `backend/prisma/` | Schema, migrações e seed. |
 | `backend/docs/openapi.ts` | Especificação OpenAPI. |
 | `frontend/src/pages/` | Telas. |

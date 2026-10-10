@@ -1,0 +1,1 @@
+export const Feedback = ({ error, success }: { error?: string; success?: string }) => <>{error && <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-red-800">{error}</p>}{success && <p role="status" className="rounded-xl border border-green-200 bg-green-50 p-4 text-green-800">{success}</p>}</>

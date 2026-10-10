@@ -2,7 +2,7 @@
 
 [README](../README.md) · [API](API.md) · [Aplicação](https://ativocontrol.vercel.app)
 
-Capturas reais de 10/10/2026. As listas mostram o banco recém-criado; indicadores e alertas do dashboard são exemplos fixos.
+Capturas reais da aplicação publicada em 10/10/2026. Listas, indicadores e alertas representam o banco conectado no momento da captura. As gravações não inserem dados demonstrativos.
 
 ## Vídeos
 
@@ -15,49 +15,49 @@ WebM sem narração. Use **View raw/Download** no GitHub. Links diretos: [aplica
 
 ## Login
 
-Entre com um usuário cadastrado. O seed cria o administrador com as variáveis locais. Não há senha pública de demonstração. JWT expira em um dia; sair remove a sessão no navegador.
+Entre com um usuário cadastrado. O seed cria o administrador com as variáveis locais. JWT expira em um dia; sair encerra suas sessões. A página pode ser recarregada sem perder uma sessão válida.
 
 ![Login](media/01-login.png)
 
 ## Painel central
 
-Cartões, gráfico e alertas são demonstrativos. O menu abre os módulos conectados à API.
+Cartões mostram total de armamentos, em uso, manutenção, estoque e quantidade de munições. O gráfico usa as movimentações dos últimos seis meses; alertas dependem dos parâmetros e preferências salvos.
 
 ![Painel](media/02-dashboard.png)
 
 ## Armamentos
 
-Cadastre tipo, marca, modelo, calibre, série e registro. Série e registro são únicos. A API permite listar, criar, atualizar e excluir.
+Cadastre tipo, marca, modelo, calibre, série, registro, aquisição, local e observações. Série e registro são únicos. Edite os dados ou abra Detalhes para consultar o histórico. Uso/manutenção são alterados pelas movimentações. Exclusão é permitida somente sem histórico; use bloqueio ou baixa para preservar registros vinculados.
 
 ![Armamentos](media/03-armamentos.png)
 
 ## Munições
 
-Cadastre tipo, calibre e quantidade. A API lista e cria lotes. Movimentações ainda não descontam estoque automaticamente.
+Cadastre tipo, calibre e quantidade. Edite, pesquise, abra detalhes ou exclua lotes sem histórico. Retirada reduz o estoque; devolução repõe a quantidade e é limitada ao saldo retirado pelo responsável. Ajustes manuais do cadastro são auditados.
 
 ![Munições](media/04-municoes.png)
 
 ## Responsáveis
 
-Cadastre nome, identificação funcional única e setor; associe às movimentações quando necessário.
+Cadastre nome, identificação funcional única e setor. Edite ou consulte os detalhes e vínculos. Responsáveis com histórico não podem ser excluídos.
 
 ![Responsáveis](media/05-responsaveis.png)
 
 ## Movimentações
 
-Informe tipo, motivo e vínculos opcionais. O autor vem do JWT. Retirada altera status do armamento para `USO`; devolução para `ESTOQUE`.
+Escolha armamento ou munição, operação e motivo. Retirada/devolução exigem responsável; munição exige quantidade. Transferência de armamento exige destino. Retirada altera status para `USO`, devolução para `ESTOQUE`, manutenção para `MANUTENCAO`; devolução da manutenção registra a data da revisão. O usuário autor vem da sessão. Estoque, registro e auditoria são salvos juntos.
 
 ![Movimentações](media/06-movimentacoes.png)
 
 ## Relatórios
 
-A tela consulta movimentações. PDF/Excel exibe mensagem de integração pendente, sem gerar arquivos. `AuditLog` existe no schema, ainda sem gravação automática ou API pública.
+Selecione o período e baixe PDF ou Excel de armamentos, munições, responsáveis, movimentações e auditoria. Inventários mostram a posição atual; o período filtra histórico e auditoria. O operador não acessa auditoria. A tabela de eventos tem paginação; a impressão da página também está disponível.
 
 ![Relatórios](media/07-relatorios.png)
 
 ## Configurações
 
-As abas apresentam parâmetros visuais sem endpoints de persistência. Busca e notificações também são demonstrativas.
+Salve dados da unidade e parâmetros de alertas como administrador. Edite nome/email no perfil, altere sua senha informando a atual e confirme a nova senha. Preferências pessoais controlam os três tipos de alerta. A aba Usuários permite ao administrador cadastrar contas, alterar papéis e ativar/desativar acesso. Busca global encontra cadastros; notificações podem ser marcadas como lidas.
 
 ![Configurações](media/08-configuracoes.png)
 

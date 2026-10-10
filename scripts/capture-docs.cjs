@@ -36,7 +36,7 @@ async function main() {
       await page.waitForLoadState('networkidle')
       await page.locator('aside').waitFor({ state: 'visible' })
       await page.waitForTimeout(1300)
-      if (new URL(page.url()).pathname !== route) throw new Error(`Rota inesperada: ${route}`)
+      await page.waitForURL(url => url.pathname.replace(/\/$/, '') === route.replace(/\/$/, ''))
       await page.screenshot({ path: path.join(media, `${name}.png`), fullPage: true })
       await page.waitForTimeout(1500)
       console.log(`Capturada ${route}`)

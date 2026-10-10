@@ -1,31 +1,21 @@
-import { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
+﻿import { Request, Response, NextFunction } from 'express'
+import jwt, { JwtPayload } from 'jsonwebtoken'
+import prisma from '../lib/prisma'
 
-interface TokenPayload {
-  id: string
-  role: string
-  iat: number
-  exp: number
-}
-
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
-  const { authorization } = req.headers
-
-  if (!authorization) {
-    return res.status(401).json({ error: 'Token não fornecido' })
-  }
-
-  const token = authorization.replace('Bearer', '').trim()
-
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
+  const match = /^Bearer\s+(\S+)$/i.exec(req.headers.authorization || '')
+  if (!match) return res.status(401).json({ error: 'Token não fornecido.' })
+  let payload: JwtPayload
   try {
-    const data = jwt.verify(token, process.env.JWT_SECRET!)
-    const { id, role } = data as TokenPayload
-
-    req.userId = id
-    req.userRole = role
-
-    return next()
-  } catch {
-    return res.status(401).json({ error: 'Token inválido' })
-  }
+    const verified = jwt.verify(match[1], process.env.JWT_SECRET!, { algorithms: ['HS256'] })
+    if (typeof verified === 'string' || typeof verified.id !== 'string') throw new Error()
+    payload = verified
+  } catch { return res.status(401).json({ error: 'Sessão inválida ou expirada. Entre novamente.' }) }
+  try {
+    const user = await prisma.user.findUnique({ where: { id: payload.id } })
+    if (!user?.active || user.tokenVersion !== (payload.version ?? 0)) return res.status(401).json({ error: 'Sessão encerrada. Entre novamente.' })
+    req.userId = user.id
+    req.userRole = user.role
+    next()
+  } catch (error) { next(error) }
 }

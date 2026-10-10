@@ -14,11 +14,15 @@ model User {
   email     String   @unique
   password  String
   role      String   // ADMIN, GESTOR_ARMARIA, OPERADOR, AUDITOR
+  active    Boolean  @default(true)
+  tokenVersion Int   @default(0)
+  preferences Json   @default("{}")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   
   movements Movement[]
   auditLogs AuditLog[]
+  notificationReads NotificationRead[]
 }
 
 model Armament {
@@ -33,6 +37,7 @@ model Armament {
   status             String   @default("ESTOQUE") // ESTOQUE, USO, MANUTENCAO, BLOQUEADA, BAIXADA
   local              String
   observacoes        String?
+  dataManutencao     DateTime?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -66,20 +71,25 @@ model Movement {
   tipo          String   // RETIRADA, DEVOLUCAO, TRANSFERENCIA, MANUTENCAO
   data          DateTime @default(now())
   motivo        String?
+  quantidade    Int?
+  destino       String?
   
   armamentId    String?
-  armament      Armament? @relation(fields: [armamentId], references: [id])
+  armament      Armament? @relation(fields: [armamentId], references: [id], onDelete: Restrict)
   
   ammunitionId  String?
-  ammunition    Ammunition? @relation(fields: [ammunitionId], references: [id])
+  ammunition    Ammunition? @relation(fields: [ammunitionId], references: [id], onDelete: Restrict)
   
   responsibleId String?
-  responsible   Responsible? @relation(fields: [responsibleId], references: [id])
+  responsible   Responsible? @relation(fields: [responsibleId], references: [id], onDelete: Restrict)
   
   userId        String
   user          User      @relation(fields: [userId], references: [id])
 
   createdAt     DateTime @default(now())
+  @@index([armamentId, data])
+  @@index([ammunitionId, responsibleId])
+  @@index([data])
 }
 
 model AuditLog {
@@ -89,4 +99,19 @@ model AuditLog {
   userId    String
   user      User     @relation(fields: [userId], references: [id])
   data      DateTime @default(now())
+  @@index([data])
+}
+
+model SystemSettings {
+  id        String @id @default("global")
+  data      Json @default("{}")
+  updatedAt DateTime @updatedAt
+}
+
+model NotificationRead {
+  userId String
+  key String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt DateTime @default(now())
+  @@id([userId, key])
 }

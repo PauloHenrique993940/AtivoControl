@@ -6,7 +6,7 @@ Gestão de armamentos, munições, responsáveis e movimentações com React, Ex
 
 ![Painel central](docs/media/02-dashboard.png)
 
-> Indicadores, gráficos e alertas do painel são demonstrativos. Os módulos de cadastro consultam a API e o Neon. A identidade visual SSP/BA não comprova vínculo ou homologação institucional.
+Indicadores, gráficos e alertas são calculados a partir dos registros do Neon. A identidade visual SSP/BA não comprova vínculo ou homologação institucional.
 
 ## Documentação
 
@@ -105,11 +105,15 @@ Aplique migrações antes de publicar alterações de schema. Builds não execut
 
 ## Estado atual
 
-- Login JWT, listagem e criação nos quatro módulos; atualização e exclusão de armamentos.
-- Retirada e devolução alteram o status do armamento associado.
-- Dashboard, alertas, busca global e configurações têm partes demonstrativas.
-- Exportação PDF/Excel, auditoria automática e autorização por papel estão pendentes.
-- Movimentações não descontam munições e não atualizam armamentos em transação única.
+- Login JWT, sessão preservada após recarga, perfil e alteração de senha com revogação das sessões anteriores.
+- Cadastro, edição, detalhes, busca, paginação e exclusão de armamentos, munições e responsáveis. Registros com movimentações são preservados.
+- Retirada, devolução, manutenção e transferência de armamentos; retirada e devolução de munições com quantidade e saldo por responsável.
+- Movimentação, estoque/status e auditoria são gravados na mesma transação, com proteção contra retiradas simultâneas.
+- Painel, alertas e busca global usam dados reais; alertas lidos e preferências pessoais são persistidos.
+- Unidade e parâmetros de estoque, manutenção e devolução são salvos no banco.
+- Relatórios PDF e Excel, filtros por período e auditoria paginada.
+- Gestão de usuários, ativação/desativação e permissões de administrador, gestor, operador e auditor.
+- Navegação disponível também no menu para celular.
 - Dados dos arquivos SQLite antigos não foram importados para o PostgreSQL.
 
-Builds, Docker, Neon, login, listagens autenticadas, rejeição sem token e navegação foram verificados. Ainda não há suíte de testes de negócio; consulte [verificações e limites](docs/OPERACAO.md).
+Com Docker Desktop ativo, execute `npm test` para preparar um PostgreSQL isolado, compilar e testar a API. Os testes não usam o Neon de produção. Há também testes de navegação em `tests/browser.cjs`; consulte [verificações e operação](docs/OPERACAO.md).

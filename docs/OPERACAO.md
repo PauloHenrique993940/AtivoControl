@@ -51,7 +51,7 @@ O banco remoto permanece após encerrar containers. A imagem API contém ferrame
 
 ## Neon
 
-Nesta instalação: banco `ativocontrol-db`, plano gratuito, São Paulo. A migração `20261010000000_init_postgresql` cria seis tabelas. Para alterações, use banco/branch de desenvolvimento e execute `npx prisma migrate dev --name nome_da_alteracao` em `backend`. Revise o SQL antes de aplicar `npm run db:deploy` ao destino. Não use reset em produção.
+Nesta instalação: banco `ativocontrol-db`, plano gratuito, São Paulo. A migração inicial cria seis tabelas; as migrações seguintes acrescentam configurações, alertas lidos, preferências, versão de sessão, quantidade/destino de movimentos e proteção dos vínculos históricos. Para alterações, use banco/branch de desenvolvimento e execute `npx prisma migrate dev --name nome_da_alteracao` em `backend`. Revise o SQL antes de aplicar `npm run db:deploy` ao destino. Não use reset em produção.
 
 SQLite antigo foi preservado localmente, sem importação automática para o Neon. Uma transferência exige importação específica e revisão dos vínculos.
 
@@ -68,8 +68,34 @@ Frontend estático e função Node para API. Docker oferece execução alternati
 
 ## Verificações e limites
 
-Verificados: compilação TypeScript/Vite, imagens e containers, saúde Neon, login, listagens autenticadas dos quatro módulos, rejeição sem token e Swagger. Capturas de 10/10/2026.
+Os testes automatizados cobrem migração, preservação de usuário, CRUD, validação, concorrência de retirada de armas/munições, rollback de falhas, saldo de devolução, auditoria, configurações, alertas, busca, papéis, desativação, senha e revogação de tokens. PDF é validado pelo formato e Excel é aberto com ExcelJS.
 
-Não foram cobertos CRUD completo, concorrência ou autorização por papel. Não há suíte automatizada de testes de negócio. A instalação reportou 15 alertas de dependências: 5 moderados e 10 altos; atualização pendente.
+Com Docker Desktop ativo:
 
-Dashboard/alertas usam exemplos; configurações não persistem; PDF/Excel e auditoria automática estão pendentes. Movimento e alteração de status não são atômicos; estoque de munições não é descontado.
+```sh
+npm test
+```
+
+O script cria/reutiliza `ativocontrol-test-db`, porta 55432, banco `ativocontrol_test`, com credenciais aleatórias em `.tmp/test.env`. Recusa URLs externas. A migração inicial é aplicada antes das novas e um usuário é inserido para verificar preservação. Fixtures ficam somente nesse banco isolado.
+
+Para testes do navegador, após `npm test`, execute em terminais separados:
+
+```sh
+node scripts/start-test.cjs
+```
+
+```powershell
+$env:VITE_API_URL='http://127.0.0.1:3334'
+npm.cmd run dev --workspace frontend -- --host 127.0.0.1 --port 5174 --strictPort
+```
+
+```sh
+npx playwright install chromium ffmpeg
+npm run test:browser
+```
+
+Os testes de navegador cobrem login/recarga, cadastro/edição/detalhes/exclusão, estoque, busca, configurações/preferências, alertas, downloads, usuários, senha, logout e menu móvel. As alterações de senha ocorrem somente no banco de teste e são revertidas ao final do fluxo bem-sucedido. Pare a API de teste antes de gerar Prisma no Windows para evitar bloqueio da DLL.
+
+Dados SQLite antigos não são importados automaticamente. Não há envio de emails, upload de foto ou integração externa de assinatura; a interface não apresenta esses recursos como disponíveis. A auditoria é preservada, sem ações de apagar histórico ou resetar o banco. O limitador de login usa memória por instância; não é um limite global distribuído.
+
+Dependências tiveram correções compatíveis aplicadas. Restam alertas que exigem mudanças de versão ou revisão de dependências transitivas; execute `npm audit` para consultar o estado do lockfile.

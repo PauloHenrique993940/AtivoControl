@@ -3,7 +3,9 @@
 **/*.db
 **/.env
 **/.env.*
-docs/
-scripts/
-.agents/
+/docs/
+/scripts/
+/tests/
+/.tmp/
+/.agents/
 skills-lock.json

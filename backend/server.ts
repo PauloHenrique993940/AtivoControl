@@ -4,16 +4,14 @@ import { openapi } from './docs/openapi'
 import cors from 'cors'
 import dotenv from 'dotenv'
 import prisma from './lib/prisma'
-import authRoutes from './routes/auth.routes'
-import armamentRoutes from './routes/armament.routes'
-import ammunitionRoutes from './routes/ammunition.routes'
-import responsibleRoutes from './routes/responsible.routes'
-import movementRoutes from './routes/movement.routes'
+import apiRoutes from './routes/api.routes'
+import { errorHandler } from './lib/domain'
 
 dotenv.config()
 
 const app = express()
 const PORT = process.env.PORT || 3333
+app.set('trust proxy', 1)
 
 if (!process.env.JWT_SECRET) throw new Error('JWT_SECRET deve ser configurado')
 app.use(cors({ origin: process.env.CORS_ORIGIN?.split(',') || false }))
@@ -32,11 +30,6 @@ app.get('/docs', (_req, res) => res.type('html').send(`<!doctype html>
 </body></html>`))
 
 // Rotas
-app.use('/auth', authRoutes)
-app.use('/armamentos', armamentRoutes)
-app.use('/municoes', ammunitionRoutes)
-app.use('/responsaveis', responsibleRoutes)
-app.use('/movimentacoes', movementRoutes)
 
 app.get('/health', async (req, res) => {
   try {
@@ -46,6 +39,10 @@ app.get('/health', async (req, res) => {
     res.status(500).json({ status: 'Error', database: 'Disconnected' })
   }
 })
+
+app.use(apiRoutes)
+app.use((_req, res) => res.status(404).json({ error: 'Rota não encontrada.' }))
+app.use(errorHandler)
 
 if (require.main === module) app.listen(PORT, () => {
   console.log(`🚀 Servidor AtivoControl rodando em http://localhost:${PORT}`)

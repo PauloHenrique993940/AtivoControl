@@ -1,9 +1,12 @@
 import { NavLink } from 'react-router-dom';
 import { LayoutDashboard, Shield, Package, ArrowLeftRight, UserCheck, FileBarChart, Power, Target, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useEffect, useState } from 'react';
 
 export const Sidebar = () => {
   const { logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  useEffect(() => { const toggle = () => setOpen(value => !value); window.addEventListener('sidebar:toggle', toggle); return () => window.removeEventListener('sidebar:toggle', toggle); }, []);
 
   const navItems = [
     { icon: LayoutDashboard, label: 'Painel Central', path: '/' },
@@ -16,7 +19,9 @@ export const Sidebar = () => {
   ];
 
   return (
-    <aside className="w-72 bg-gray-50 text-gray-900 flex flex-col h-full border-r border-gray-200 relative overflow-hidden">
+    <>
+    {open && <button aria-label="Fechar menu" className="fixed inset-0 bg-black/40 z-40 md:hidden" onClick={() => setOpen(false)} />}
+    <aside className={`w-72 shrink-0 bg-gray-50 text-gray-900 flex-col h-full border-r border-gray-200 overflow-hidden fixed md:relative z-40 md:z-auto left-0 top-0 ${open ? 'flex' : 'hidden md:flex'}`}>
       {/* Detalhe Vermelho Lateral */}
       <div className="absolute right-0 top-0 bottom-0 w-[3px] bg-ssp-red opacity-80"></div>
 
@@ -35,6 +40,7 @@ export const Sidebar = () => {
           <NavLink
             key={item.path}
             to={item.path}
+            onClick={() => setOpen(false)}
             className={({ isActive }) =>
               `flex items-center gap-4 px-5 py-3.5 rounded-xl transition-all duration-200 group ${
                 isActive 
@@ -67,5 +73,6 @@ export const Sidebar = () => {
         </button>
       </div>
     </aside>
+    </>
   );
 };

@@ -8,6 +8,7 @@ node_modules
 *.db
 
 /generated/prisma
+.tmp/
 docs/media/recordings/
 .vercel
 .env*

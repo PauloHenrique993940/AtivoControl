@@ -40,6 +40,10 @@
 }
 
 @layer components {
+  .btn { @apply bg-ssp-navy text-white px-4 py-2.5 rounded-xl font-bold hover:bg-ssp-navy/90 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-secondary { @apply bg-white border border-gray-200 px-3 py-2 rounded-lg text-sm font-bold hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed; }
+  .field { @apply w-full border border-gray-300 bg-white rounded-xl px-4 py-3 text-gray-900 focus:ring-2 focus:ring-ssp-navy outline-none; }
+  .card { @apply bg-white rounded-2xl border border-gray-200 p-6 shadow-sm; }
   .btn-tactical {
     @apply bg-ssp-navy hover:bg-ssp-navy/80 text-white font-bold py-2 px-4 rounded-lg border-b-2 border-ssp-red transition-all active:translate-y-0.5;
   }
@@ -48,3 +52,5 @@
     @apply bg-black/20 border border-white/10 rounded-lg px-4 py-2 text-white focus:ring-1 focus:ring-ssp-gold outline-none transition-all;
   }
 }
+
+@media print { aside, header, button, .no-print { display: none !important; } main { overflow: visible !important; padding: 0 !important; } .h-screen { height: auto !important; } body { color: black; background: white; } }

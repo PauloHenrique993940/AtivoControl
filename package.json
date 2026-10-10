@@ -10,7 +10,10 @@
     "vercel-build": "npm run build",
     "db:deploy": "npm run db:deploy --workspace backend",
     "docs:capture": "node scripts/capture-docs.cjs",
-    "docs:maps": "node scripts/render-maps.cjs"
+    "docs:maps": "node scripts/render-maps.cjs",
+    "test": "npm run test:setup && npm run build && node --test tests/integration.cjs",
+    "test:setup": "node scripts/setup-test.cjs",
+    "test:browser": "node tests/browser.cjs"
   },
   "devDependencies": {
     "playwright": "^1.64.0"
