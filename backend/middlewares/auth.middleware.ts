@@ -18,7 +18,7 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
   const token = authorization.replace('Bearer', '').trim()
 
   try {
-    const data = jwt.verify(token, process.env.JWT_SECRET || 'secret')
+    const data = jwt.verify(token, process.env.JWT_SECRET!)
     const { id, role } = data as TokenPayload
 
     req.userId = id

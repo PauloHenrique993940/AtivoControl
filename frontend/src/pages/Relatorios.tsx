@@ -13,7 +13,7 @@ interface AuditLog {
 
 export const Relatorios = () => {
   const [logs, setLogs] = useState<AuditLog[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [, setIsLoading] = useState(false);
 
   const fetchLogs = async () => {
     try {

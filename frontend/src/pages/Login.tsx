@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
-import { ShieldCheck, Lock, User, Crosshair, Fingerprint, Activity } from 'lucide-react';
+import { ShieldCheck, Lock, User, Crosshair, Activity } from 'lucide-react';
 
 export const Login = () => {
   const [email, setEmail] = useState('');

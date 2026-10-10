@@ -1,0 +1,18 @@
+{
+  "name": "ativocontrol-workspace",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspace backend && npm run build --workspace frontend",
+    "vercel-build": "npm run build",
+    "db:deploy": "npm run db:deploy --workspace backend",
+    "docs:capture": "node scripts/capture-docs.cjs",
+    "docs:maps": "node scripts/render-maps.cjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.64.0"
+  }
+}

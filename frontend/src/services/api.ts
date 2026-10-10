@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Configuração base da API (Porta 3333 onde roda nosso backend)
 export const api = axios.create({
-  baseURL: 'http://localhost:3333',
+  baseURL: import.meta.env.VITE_API_URL || '/api',
 });
 
 // Interceptor para injetar o token de autorização

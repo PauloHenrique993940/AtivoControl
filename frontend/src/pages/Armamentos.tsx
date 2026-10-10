@@ -1,4 +1,4 @@
-import { Plus, Eye, Edit, History, ShieldAlert, Trash2 } from 'lucide-react';
+import { Plus, Eye, Edit, ShieldAlert, Trash2 } from 'lucide-react';
 import { Table } from '../components/Table';
 import { useState, useEffect } from 'react';
 import { Modal } from '../components/Modal';

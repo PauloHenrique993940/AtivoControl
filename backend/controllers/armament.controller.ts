@@ -49,6 +49,7 @@ export const ArmamentController = {
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (typeof id !== 'string') return res.status(400).json({ error: 'ID inválido' });
       const { tipo, marca, modelo, calibre, numSerie, numRegistro, status } = req.body;
 
       const armament = await prisma.armament.update({
@@ -66,6 +67,7 @@ export const ArmamentController = {
   async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
+      if (typeof id !== 'string') return res.status(400).json({ error: 'ID inválido' });
       await prisma.armament.delete({ where: { id } });
       res.json({ message: 'Armamento removido com sucesso.' });
     } catch (error) {
