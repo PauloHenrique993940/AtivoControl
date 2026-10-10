@@ -5,9 +5,10 @@ export async function notifications(userId: string) {
   const config = await settings()
   const user = await prisma.user.findUniqueOrThrow({ where: { id: userId } })
   const prefs = preferencesSchema.parse(user.preferences)
-  const [ammo, arms, reads] = await Promise.all([
+  const [ammo, arms, vests, reads] = await Promise.all([
     prisma.ammunition.findMany({ where: { quantidade: { lte: config.baixoEstoque } } }),
     prisma.armament.findMany({ where: { status: { not: 'BAIXADA' } }, include: { movements: { orderBy: { data: 'desc' }, take: 1, include: { responsible: true } } } }),
+    prisma.vest.findMany({ where: { status: { not: 'BAIXADA' } }, include: { movements: { orderBy: { data: 'desc' }, take: 1, include: { responsible: true } } } }),
     prisma.notificationRead.findMany({ where: { userId } }),
   ])
   const readKeys = new Set(reads.map(item => item.key))
@@ -20,21 +21,31 @@ export async function notifications(userId: string) {
     const last = item.movements[0]
     if (prefs.devolucao && item.status === 'USO' && last && (Date.now() - last.data.getTime()) / 86400000 >= config.prazoDevolucao) add(`devolucao:${last.id}`, 'Devolução atrasada', `${item.numSerie} — ${last.responsible?.nome || 'Responsável não informado'}.`, '/movimentacoes', 'critical')
   }
+  const today = new Date(Date.now() - 3 * 3600000).toISOString().slice(0, 10)
+  for (const item of vests) {
+    const age = (Date.now() - (item.dataManutencao || item.dataAquisicao).getTime()) / 86400000
+    if (prefs.manutencao && item.dataValidade && item.dataValidade.toISOString().slice(0, 10) < today) add(`validade:${item.id}:${item.updatedAt.toISOString()}`, 'Validade do colete vencida', `${item.numSerie} · tamanho ${item.tamanho} — ${item.local}.`, '/coletes', 'critical')
+    if (prefs.manutencao && (item.status === 'MANUTENCAO' || age >= config.diasManutencao)) add(`manutencao:${item.id}:${item.updatedAt.toISOString()}`, item.status === 'MANUTENCAO' ? 'Colete em manutenção' : 'Revisão de colete necessária', `${item.numSerie} · tamanho ${item.tamanho} — ${item.local}.`, '/coletes', 'critical')
+    const last = item.movements[0]
+    if (prefs.devolucao && item.status === 'USO' && last && (Date.now() - last.data.getTime()) / 86400000 >= config.prazoDevolucao) add(`devolucao:${last.id}`, 'Devolução de colete atrasada', `${item.numSerie} — ${last.responsible?.nome || 'Responsável não informado'}.`, '/movimentacoes', 'critical')
+  }
   return result
 }
 
 export async function dashboard(userId: string) {
   const start = new Date(); start.setUTCDate(1); start.setUTCHours(0, 0, 0, 0); start.setUTCMonth(start.getUTCMonth() - 5)
-  const [total, uso, manutencao, estoque, ammunition, movements, recent, alerts] = await Promise.all([
+  const [total, uso, manutencao, estoque, ammunition, movements, recent, alerts, coletes, coletesEmUso, coletesEmEstoque, pistolas, pistolasEmEstoque] = await Promise.all([
     prisma.armament.count(), prisma.armament.count({ where: { status: 'USO' } }), prisma.armament.count({ where: { status: 'MANUTENCAO' } }), prisma.armament.count({ where: { status: 'ESTOQUE' } }),
     prisma.ammunition.aggregate({ _sum: { quantidade: true } }),
     prisma.movement.findMany({ where: { data: { gte: start } }, select: { data: true, tipo: true } }),
-    prisma.movement.findMany({ orderBy: { data: 'desc' }, take: 5, include: { armament: true, ammunition: true, responsible: true } }), notifications(userId),
+    prisma.movement.findMany({ orderBy: { data: 'desc' }, take: 5, include: { armament: true, ammunition: true, vest: true, responsible: true } }), notifications(userId),
+    prisma.vest.count(), prisma.vest.count({ where: { status: 'USO' } }), prisma.vest.count({ where: { status: 'ESTOQUE' } }),
+    prisma.armament.count({ where: { tipo: { contains: 'pistola', mode: 'insensitive' } } }), prisma.armament.count({ where: { tipo: { contains: 'pistola', mode: 'insensitive' }, status: 'ESTOQUE' } }),
   ])
   const chart = Array.from({ length: 6 }, (_, index) => {
     const date = new Date(start); date.setUTCMonth(start.getUTCMonth() + index)
     const rows = movements.filter(row => row.data.getUTCFullYear() === date.getUTCFullYear() && row.data.getUTCMonth() === date.getUTCMonth())
     return { name: date.toLocaleDateString('pt-BR', { month: 'short', year: '2-digit', timeZone: 'UTC' }), retiradas: rows.filter(row => row.tipo === 'RETIRADA').length, devolucoes: rows.filter(row => row.tipo === 'DEVOLUCAO').length }
   })
-  return { total, uso, manutencao, estoque, municoes: ammunition._sum.quantidade || 0, chart, recent, alerts }
+  return { total, uso, manutencao, estoque, municoes: ammunition._sum.quantidade || 0, coletes, coletesEmUso, coletesEmEstoque, pistolas, pistolasEmEstoque, chart, recent, alerts }
 }

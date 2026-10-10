@@ -43,7 +43,7 @@ test('migração preserva usuário e mantém o esquema ampliado', async () => {
 })
 test('cadastros, atomicidade, concorrência, permissões e exportações', async t => {
   const tag = crypto.randomUUID().slice(0, 8)
-  let responsible, armament, ammunition, operator, operatorToken, auditor, auditorToken
+  let responsible, armament, ammunition, vest, operator, operatorToken, auditor, auditorToken
   await t.test('validação e CRUD completo preservam histórico', async () => {
     assert.equal((await request('GET', '/armamentos', null, null)).status, 401)
     assert.equal((await request('POST', '/municoes', { tipo: 'Teste', calibre: '9mm', quantidade: -1 })).status, 400)
@@ -59,6 +59,68 @@ test('cadastros, atomicidade, concorrência, permissões e exportações', async
     assert.equal((await request('GET', `/armamentos/${crypto.randomUUID()}`)).status, 404)
     const spare = (await request('POST', '/municoes', { tipo: 'Excluir', calibre: 'Teste', quantidade: 0 })).body
     assert.equal((await request('DELETE', `/municoes/${spare.id}`)).status, 200)
+  })
+  await t.test('quantidade de pistolas cria unidades identificáveis e falhas revertem o lote inteiro', async () => {
+    const dados = { tipo: 'Pistola', marca: 'Teste', modelo: 'Lote', calibre: '9mm', local: 'Armaria teste' }
+    const unidades = [1, 2].map(index => ({ numSerie: `${tag}-lote-${index}`, numRegistro: `${tag}-registro-${index}` }))
+    const before = await prisma.armament.count()
+    const auditBefore = await prisma.auditLog.count()
+    assert.equal((await request('POST', '/armamentos/lote', { quantidade: 3, dados, unidades })).status, 400)
+    assert.equal((await request('POST', '/armamentos/lote', { quantidade: 0, dados, unidades: [] })).status, 400)
+    assert.equal((await request('POST', '/armamentos/lote', { quantidade: 101, dados, unidades })).status, 400)
+    assert.equal((await request('POST', '/armamentos/lote', { quantidade: 2, dados, unidades: [unidades[0], unidades[0]] })).status, 400)
+    assert.equal(await prisma.armament.count(), before)
+    assert.equal(await prisma.auditLog.count(), auditBefore)
+    const created = await request('POST', '/armamentos/lote', { quantidade: 2, dados, unidades })
+    assert.equal(created.status, 201)
+    assert.equal(created.body.quantidade, 2)
+    assert.equal(created.body.items.length, 2)
+    assert.equal(new Set(created.body.items.map(item => item.id)).size, 2)
+    assert.deepEqual(created.body.items.map(item => item.numSerie).sort(), unidades.map(item => item.numSerie).sort())
+    assert.ok(created.body.items.every(item => item.tipo === 'Pistola' && item.status === 'ESTOQUE'))
+    const rollbackCount = await prisma.armament.count()
+    const rollbackAudit = await prisma.auditLog.count()
+    const rollbackSerial = `${tag}-rollback`
+    assert.equal((await request('POST', '/armamentos/lote', { quantidade: 2, dados, unidades: [{ numSerie: rollbackSerial, numRegistro: rollbackSerial }, unidades[1]] })).status, 409)
+    assert.equal(await prisma.armament.count(), rollbackCount)
+    assert.equal(await prisma.auditLog.count(), rollbackAudit)
+    assert.equal(await prisma.armament.findUnique({ where: { numSerie: rollbackSerial } }), null)
+    const summary = (await request('GET', '/dashboard')).body
+    assert.ok(summary.pistolas >= 2 && summary.pistolasEmEstoque >= 2)
+  })
+  await t.test('coletes preservam dados, validade, responsável e histórico', async () => {
+    const payload = { marca: 'Teste', modelo: `Colete ${tag}`, tamanho: 'M', nivelProtecao: 'IIIA', numSerie: `${tag}-colete`, numPatrimonio: `${tag}-patrimonio`, local: 'Armaria teste', dataFabricacao: '2020-01-01', dataValidade: '2035-01-01', observacoes: 'Capa e painéis conferidos' }
+    const created = await request('POST', '/coletes', payload)
+    assert.equal(created.status, 201); vest = created.body
+    assert.equal(vest.status, 'ESTOQUE'); assert.ok(vest.dataAquisicao)
+    assert.equal((await request('POST', '/coletes', payload)).status, 409)
+    assert.equal((await request('POST', '/coletes', { ...payload, numSerie: tag + '-invalid', numPatrimonio: tag + '-invalid', tamanho: '' })).status, 400)
+    assert.equal((await request('POST', '/coletes', { ...payload, numSerie: tag + '-dates', numPatrimonio: tag + '-dates', dataFabricacao: '2036-01-01' })).status, 400)
+    assert.equal((await request('PUT', `/coletes/${vest.id}`, { dataFabricacao: '2036-01-01' })).status, 400)
+    assert.equal((await request('PUT', `/coletes/${vest.id}`, { dataValidade: '2019-01-01' })).status, 400)
+    const edited = await request('PUT', `/coletes/${vest.id}`, { tamanho: 'G', observacoes: 'Tamanho revisado' })
+    assert.equal(edited.status, 200); assert.equal(edited.body.tamanho, 'G'); assert.equal(edited.body.status, 'ESTOQUE'); assert.equal(edited.body.local, payload.local)
+    const movement = { tipo: 'RETIRADA', motivo: 'Teste de colete', vestId: vest.id, responsibleId: responsible.id }
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, armamentId: armament.id })).status, 400)
+    assert.equal((await request('POST', '/movimentacoes', movement)).status, 201)
+    assert.equal((await request('GET', `/coletes/${vest.id}`)).body.status, 'USO')
+    assert.equal((await request('PUT', `/coletes/${vest.id}`, { status: 'ESTOQUE' })).status, 409)
+    const other = (await request('POST', '/responsaveis', { nome: 'Responsável de colete', identificacaoFuncional: tag + '-vest-other', setor: 'Teste' })).body
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, tipo: 'DEVOLUCAO', responsibleId: other.id })).status, 409)
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, tipo: 'DEVOLUCAO' })).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, tipo: 'TRANSFERENCIA', destino: 'Reserva' })).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, tipo: 'MANUTENCAO' })).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, tipo: 'DEVOLUCAO' })).status, 201)
+    const detail = (await request('GET', `/coletes/${vest.id}`)).body
+    assert.equal(detail.movements.length, 5); assert.equal(detail.local, 'Reserva'); assert.ok(detail.dataManutencao)
+    assert.equal(detail.observacoes, 'Tamanho revisado')
+    assert.equal((await request('DELETE', `/coletes/${vest.id}`)).status, 409)
+    assert.equal((await request('GET', `/search?term=${tag}`)).body.some(item => item.id === vest.id), true)
+    const expired = (await request('POST', '/coletes', { ...payload, numSerie: tag + '-expired', numPatrimonio: tag + '-expired', dataFabricacao: '2010-01-01', dataValidade: '2020-01-01' })).body
+    assert.equal((await request('POST', '/movimentacoes', { ...movement, vestId: expired.id })).status, 409)
+    assert.equal((await request('DELETE', `/coletes/${expired.id}`)).status, 200)
+    const summary = (await request('GET', '/dashboard')).body
+    assert.ok(summary.coletes >= 1 && summary.coletesEmEstoque >= 1); assert.equal(typeof summary.coletesEmUso, 'number')
   })
   await t.test('retirada concorrente não duplica e falha não cria auditoria', async () => {
     const payload = { tipo: 'RETIRADA', motivo: 'Teste concorrência', armamentId: armament.id, responsibleId: responsible.id }
@@ -89,12 +151,47 @@ test('cadastros, atomicidade, concorrência, permissões e exportações', async
     assert.equal((await request('POST', '/movimentacoes', { ...payload, tipo: 'DEVOLUCAO', quantidade: 7 })).status, 201)
     assert.equal((await prisma.ammunition.findUnique({ where: { id: ammunition.id } })).quantidade, 10)
   })
+  await t.test('entrada de munição incrementa estoque com histórico, concorrência e limite inteiro', async () => {
+    const entry = await request('POST', `/municoes/${ammunition.id}/entrada`, { quantidade: 25, motivo: 'Recebimento teste' })
+    assert.equal(entry.status, 201); assert.equal(entry.body.quantidade, 35)
+    const record = await prisma.movement.findFirst({ where: { ammunitionId: ammunition.id, tipo: 'ENTRADA' }, orderBy: { data: 'desc' } })
+    assert.equal(record.quantidade, 25); assert.equal(record.userId, adminId)
+    assert.equal((await request('POST', `/municoes/${ammunition.id}/entrada`, { quantidade: 0, motivo: 'Inválido' })).status, 400)
+    assert.equal((await request('POST', `/municoes/${ammunition.id}/entrada`, { quantidade: 1, motivo: '' })).status, 400)
+    const withdrawal = { tipo: 'RETIRADA', motivo: 'Saldo por responsável', ammunitionId: ammunition.id, responsibleId: responsible.id, quantidade: 7 }
+    assert.equal((await request('POST', '/movimentacoes', withdrawal)).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { tipo: 'ENTRADA', motivo: 'Entrada sem responsável', ammunitionId: ammunition.id, quantidade: 50 })).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { ...withdrawal, tipo: 'DEVOLUCAO', quantidade: 8 })).status, 409)
+    assert.equal((await request('POST', '/movimentacoes', { ...withdrawal, tipo: 'DEVOLUCAO', quantidade: 7 })).status, 201)
+    assert.equal((await request('GET', `/municoes/${ammunition.id}`)).body.quantidade, 85)
+    const concurrent = await Promise.all([20, 30].map(quantidade => request('POST', `/municoes/${ammunition.id}/entrada`, { quantidade, motivo: 'Entrada concorrente' })))
+    assert.deepEqual(concurrent.map(result => result.status), [201, 201])
+    assert.equal((await request('GET', `/municoes/${ammunition.id}`)).body.quantidade, 135)
+    assert.equal((await request('POST', '/movimentacoes', { tipo: 'ENTRADA', motivo: 'Não permitido para armamento', armamentId: armament.id, quantidade: 1 })).status, 400)
+    assert.equal((await request('POST', '/movimentacoes', { tipo: 'ENTRADA', motivo: 'Não permitido para colete', vestId: vest.id, quantidade: 1 })).status, 400)
+    const full = (await request('POST', '/municoes', { tipo: 'Limite ' + tag, calibre: '9mm', quantidade: 2147483647 })).body
+    const movementsBefore = await prisma.movement.count({ where: { ammunitionId: full.id } })
+    const auditBefore = await prisma.auditLog.count()
+    assert.equal((await request('POST', `/municoes/${full.id}/entrada`, { quantidade: 1, motivo: 'Ultrapassa limite' })).status, 409)
+    assert.equal((await request('POST', `/municoes/${full.id}/entrada`, { quantidade: 2147483648, motivo: 'Fora do intervalo' })).status, 400)
+    assert.equal((await request('GET', `/municoes/${full.id}`)).body.quantidade, 2147483647)
+    assert.equal(await prisma.movement.count({ where: { ammunitionId: full.id } }), movementsBefore)
+    assert.equal(await prisma.auditLog.count(), auditBefore)
+    assert.equal((await request('DELETE', `/municoes/${ammunition.id}`)).status, 409)
+  })
   await t.test('papéis são aplicados na API e contas desativadas perdem acesso', async () => {
     operator = (await request('POST', '/users', { name: 'Operador teste', email: `${tag}@example.com`, role: 'OPERADOR', password: env.ADMIN_PASSWORD })).body
     operatorToken = (await request('POST', '/auth/login', { email: operator.email, password: env.ADMIN_PASSWORD }, null)).body.token
     assert.equal((await request('POST', '/municoes', { tipo: 'Não permitido', calibre: '9mm' }, operatorToken)).status, 403)
     assert.equal((await request('GET', '/audit', null, operatorToken)).status, 403)
     assert.equal((await request('PUT', '/settings', { unidade: 'Não permitido' }, operatorToken)).status, 403)
+    assert.equal((await request('POST', '/coletes', { marca: 'Teste' }, operatorToken)).status, 403)
+    assert.equal((await request('POST', '/armamentos/lote', {}, operatorToken)).status, 403)
+    assert.equal((await request('POST', `/municoes/${ammunition.id}/entrada`, { quantidade: 1, motivo: 'Não permitido' }, operatorToken)).status, 403)
+    assert.equal((await request('POST', '/movimentacoes', { tipo: 'ENTRADA', motivo: 'Não permitido', ammunitionId: ammunition.id, quantidade: 1 }, operatorToken)).status, 403)
+    const vestMovement = { tipo: 'RETIRADA', motivo: 'Operador retira colete', vestId: vest.id, responsibleId: responsible.id }
+    assert.equal((await request('POST', '/movimentacoes', vestMovement, operatorToken)).status, 201)
+    assert.equal((await request('POST', '/movimentacoes', { ...vestMovement, tipo: 'DEVOLUCAO' }, operatorToken)).status, 201)
     auditor = (await request('POST', '/users', { name: 'Auditor teste', email: `${tag}-audit@example.com`, role: 'AUDITOR', password: env.ADMIN_PASSWORD })).body
     auditorToken = (await request('POST', '/auth/login', { email: auditor.email, password: env.ADMIN_PASSWORD }, null)).body.token
     assert.equal((await request('GET', '/audit', null, auditorToken)).status, 200)
@@ -104,7 +201,7 @@ test('cadastros, atomicidade, concorrência, permissões e exportações', async
     assert.equal((await request('GET', '/auth/me', null, operatorToken)).status, 401)
   })
   await t.test('configurações, alertas e busca persistem no banco', async () => {
-    const config = { unidade: 'Unidade teste', sigla: 'TEST', endereco: 'Rua teste', telefone: '000', baixoEstoque: 100, prazoDevolucao: 7, diasManutencao: 180 }
+    const config = { unidade: 'Unidade teste', sigla: 'TEST', endereco: 'Rua teste', telefone: '000', baixoEstoque: 200, prazoDevolucao: 7, diasManutencao: 180 }
     assert.equal((await request('PUT', '/settings', config)).status, 200)
     assert.equal((await request('GET', '/settings')).body.unidade, config.unidade)
     assert.equal((await request('GET', `/search?term=${tag}`)).body.some(item => item.id === armament.id), true)
@@ -121,7 +218,7 @@ test('cadastros, atomicidade, concorrência, permissões e exportações', async
     assert.equal(detail.movements.length, 5)
   })
   await t.test('PDF e Excel são arquivos reais e filtros são validados', async () => {
-    for (const type of ['armamentos', 'municoes', 'responsaveis', 'movimentacoes', 'auditoria']) {
+    for (const type of ['armamentos', 'coletes', 'municoes', 'responsaveis', 'movimentacoes', 'auditoria']) {
       const pdf = await request('GET', `/reports/${type}/pdf`)
       assert.equal(pdf.status, 200); assert.equal(pdf.buffer.subarray(0, 5).toString(), '%PDF-')
       const excel = await request('GET', `/reports/${type}/xlsx`)

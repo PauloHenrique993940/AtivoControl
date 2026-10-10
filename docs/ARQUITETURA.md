@@ -29,7 +29,7 @@ A Vercel serve `frontend/dist` e encaminha `/api/*` para `api/index.ts`. O backe
 
 ![Mapa](media/mapa-docker.png)
 
-[Vers?o vetorial SVG](media/mapa-docker.svg)
+[Versão vetorial SVG](media/mapa-docker.svg)
 
 ```mermaid
 flowchart LR
@@ -59,6 +59,7 @@ flowchart LR
   login["Login"] --> panel["Painel central"]
   panel --> weapons["Armamentos"]
   panel --> ammo["Munições"]
+  panel --> vests["Coletes"]
   panel --> people["Responsáveis"]
   panel --> movements["Movimentações"]
   panel --> reports["Relatórios"]
@@ -69,7 +70,7 @@ flowchart LR
 
 ![Mapa](media/mapa-dados.png)
 
-[Vers?o vetorial SVG](media/mapa-dados.svg)
+[Versão vetorial SVG](media/mapa-dados.svg)
 
 ```mermaid
 erDiagram
@@ -77,6 +78,7 @@ erDiagram
   User ||--o{ AuditLog : possui
   User ||--o{ NotificationRead : le
   Armament |o--o{ Movement : associado
+  Vest |o--o{ Movement : associado
   Ammunition |o--o{ Movement : associada
   Responsible |o--o{ Movement : associado
   User {
@@ -100,6 +102,18 @@ erDiagram
     string calibre
     int quantidade
   }
+  Vest {
+    string id PK
+    string marca
+    string modelo
+    string tamanho
+    string nivelProtecao
+    string numSerie UK
+    string numPatrimonio UK
+    string status
+    datetime dataFabricacao
+    datetime dataValidade
+  }
   Responsible {
     string id PK
     string identificacaoFuncional UK
@@ -110,6 +124,7 @@ erDiagram
     string id PK
     string userId FK
     string armamentId FK
+    string vestId FK
     string ammunitionId FK
     string responsibleId FK
     string tipo
@@ -136,7 +151,7 @@ erDiagram
   }
 ```
 
-Todo movimento tem usuário; os demais vínculos são opcionais. Senhas são hashes bcrypt. Tipo, status e papel são strings, sem enum no banco. Veja o [schema completo](../backend/prisma/schema.prisma).
+Todo movimento tem usuário e exatamente um ativo entre armamento, colete e munição. O responsável é exigido para retirada/devolução. O recebimento de munição usa `ENTRADA` e incrementa o estoque; o cadastro em lote cria armamentos individuais em uma única transação. Vínculos históricos impedem exclusão dos ativos. Senhas são hashes bcrypt. Tipo, status e papel são strings, sem enum no banco. Veja o [schema completo](../backend/prisma/schema.prisma).
 
 ## Organização
 

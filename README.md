@@ -1,6 +1,6 @@
 ﻿# AtivoControl
 
-Gestão de armamentos, munições, responsáveis e movimentações com React, Express, Prisma e PostgreSQL no Neon.
+Gestão de armamentos, coletes, munições, responsáveis e movimentações com React, Express, Prisma e PostgreSQL no Neon.
 
 [Aplicação online](https://ativocontrol.vercel.app) · [Swagger](https://ativocontrol.vercel.app/api/docs) · [OpenAPI](https://ativocontrol.vercel.app/api/openapi.json)
 
@@ -35,7 +35,7 @@ Gravações reais WebM, sem narração e sem senhas ou tokens visíveis. No GitH
 | **Responsáveis** | **Swagger** |
 | ![Responsáveis](docs/media/05-responsaveis.png) | ![Swagger](docs/media/09-swagger.png) |
 
-As dez capturas completas estão no [guia](docs/GUIA.md).
+As onze capturas completas estão no [guia](docs/GUIA.md).
 
 ## Arquitetura
 
@@ -106,8 +106,11 @@ Aplique migrações antes de publicar alterações de schema. Builds não execut
 ## Estado atual
 
 - Login JWT, sessão preservada após recarga, perfil e alteração de senha com revogação das sessões anteriores.
-- Cadastro, edição, detalhes, busca, paginação e exclusão de armamentos, munições e responsáveis. Registros com movimentações são preservados.
-- Retirada, devolução, manutenção e transferência de armamentos; retirada e devolução de munições com quantidade e saldo por responsável.
+- Cadastro, edição, detalhes, busca, paginação e exclusão de armamentos, coletes, munições e responsáveis. Registros com movimentações são preservados.
+- Cadastro de armamentos em lote de até 100 unidades, com série e registro únicos para cada pistola; indicadores mostram as quantidades cadastradas e em estoque.
+- Coletes com tamanho, nível de proteção, marca, modelo, série, patrimônio, fabricação, aquisição, validade, local e observações. Retirada de colete vencido é bloqueada.
+- Retirada, devolução, manutenção e transferência de armamentos/coletes; entrada, retirada e devolução de munições com quantidade e saldo por responsável.
+- Entrada de munição soma ao estoque existente e registra quantidade, motivo e autor no histórico; administrador e gestor podem registrar recebimentos.
 - Movimentação, estoque/status e auditoria são gravados na mesma transação, com proteção contra retiradas simultâneas.
 - Painel, alertas e busca global usam dados reais; alertas lidos e preferências pessoais são persistidos.
 - Unidade e parâmetros de estoque, manutenção e devolução são salvos no banco.

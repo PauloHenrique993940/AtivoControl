@@ -6,6 +6,7 @@ import { Dashboard } from '../pages/Dashboard';
 import { Login } from '../pages/Login';
 import { Armamentos } from '../pages/Armamentos';
 import { Municoes } from '../pages/Municoes';
+import { Coletes } from '../pages/Coletes';
 import { Movimentacoes } from '../pages/Movimentacoes';
 import { Responsaveis } from '../pages/Responsaveis';
 import { Relatorios } from '../pages/Relatorios';
@@ -39,6 +40,7 @@ export const AppRoutes = () => {
       <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
       <Route path="/armamentos" element={<PrivateRoute><Armamentos /></PrivateRoute>} />
       <Route path="/municoes" element={<PrivateRoute><Municoes /></PrivateRoute>} />
+      <Route path="/coletes" element={<PrivateRoute><Coletes /></PrivateRoute>} />
       <Route path="/movimentacoes" element={<PrivateRoute><Movimentacoes /></PrivateRoute>} />
       <Route path="/responsaveis" element={<PrivateRoute><Responsaveis /></PrivateRoute>} />
       <Route path="/relatorios" element={<PrivateRoute><Relatorios /></PrivateRoute>} />

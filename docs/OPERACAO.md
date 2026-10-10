@@ -51,7 +51,7 @@ O banco remoto permanece após encerrar containers. A imagem API contém ferrame
 
 ## Neon
 
-Nesta instalação: banco `ativocontrol-db`, plano gratuito, São Paulo. A migração inicial cria seis tabelas; as migrações seguintes acrescentam configurações, alertas lidos, preferências, versão de sessão, quantidade/destino de movimentos e proteção dos vínculos históricos. Para alterações, use banco/branch de desenvolvimento e execute `npx prisma migrate dev --name nome_da_alteracao` em `backend`. Revise o SQL antes de aplicar `npm run db:deploy` ao destino. Não use reset em produção.
+Nesta instalação: banco `ativocontrol-db`, plano gratuito, São Paulo. A migração inicial cria seis tabelas; as migrações seguintes acrescentam configurações, alertas lidos, preferências, versão de sessão, quantidade/destino de movimentos e proteção dos vínculos históricos. A ampliação de inventário acrescenta coletes e o vínculo opcional de movimentação com colete; os cadastros existentes são preservados. Cadastro em lote e entrada de munição usam as tabelas de armamentos e movimentações existentes. Para alterações, use banco/branch de desenvolvimento e execute `npx prisma migrate dev --name nome_da_alteracao` em `backend`. Revise o SQL antes de aplicar `npm run db:deploy` ao destino. Não use reset em produção.
 
 SQLite antigo foi preservado localmente, sem importação automática para o Neon. Uma transferência exige importação específica e revisão dos vínculos.
 
@@ -68,7 +68,7 @@ Frontend estático e função Node para API. Docker oferece execução alternati
 
 ## Verificações e limites
 
-Os testes automatizados cobrem migração, preservação de usuário, CRUD, validação, concorrência de retirada de armas/munições, rollback de falhas, saldo de devolução, auditoria, configurações, alertas, busca, papéis, desativação, senha e revogação de tokens. PDF é validado pelo formato e Excel é aberto com ExcelJS.
+Os testes automatizados cobrem migração, preservação de usuário, CRUD, validação, concorrência de retirada de armas/munições, rollback de falhas, saldo de devolução, auditoria, configurações, alertas, busca, papéis, desativação, senha e revogação de tokens. Cadastro em lote verifica quantidades, identificação única e rollback integral; coletes verificam tamanho, datas, retirada/devolução, responsável e preservação do histórico. Entrada de munição verifica soma concorrente, permissão, limite inteiro e separação do saldo do responsável. PDF é validado pelo formato e Excel é aberto com ExcelJS, incluindo inventário de coletes.
 
 Com Docker Desktop ativo:
 
@@ -94,7 +94,7 @@ npx playwright install chromium ffmpeg
 npm run test:browser
 ```
 
-Os testes de navegador cobrem login/recarga, cadastro/edição/detalhes/exclusão, estoque, busca, configurações/preferências, alertas, downloads, usuários, senha, logout e menu móvel. As alterações de senha ocorrem somente no banco de teste e são revertidas ao final do fluxo bem-sucedido. Pare a API de teste antes de gerar Prisma no Windows para evitar bloqueio da DLL.
+Os testes de navegador cobrem login/recarga, cadastro/edição/detalhes/exclusão, lote de pistolas, coletes, entrada e retirada de munição, estoque, busca, configurações/preferências, alertas, downloads, usuários, senha, logout e menu móvel. As alterações de senha ocorrem somente no banco de teste e são revertidas ao final do fluxo bem-sucedido. Pare a API de teste antes de gerar Prisma no Windows para evitar bloqueio da DLL.
 
 Dados SQLite antigos não são importados automaticamente. Não há envio de emails, upload de foto ou integração externa de assinatura; a interface não apresenta esses recursos como disponíveis. A auditoria é preservada, sem ações de apagar histórico ou resetar o banco. O limitador de login usa memória por instância; não é um limite global distribuído.
 

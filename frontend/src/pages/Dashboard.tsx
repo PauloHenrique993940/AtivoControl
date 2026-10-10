@@ -2,6 +2,30 @@ import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import { Link } from 'react-router-dom'
 import { useData, Row, date } from '../services/ui'
 import { Feedback } from '../components/Feedback'
-export const Dashboard=()=>{
-const {data,error,loading,reload}=useData<Row>('/dashboard');return <div className="space-y-6"><div className="flex justify-between gap-3"><h1 className="text-3xl font-black text-ssp-navy">Painel central</h1><button className="btn-secondary" onClick={()=>void reload()}>Atualizar dados</button></div><p className="text-gray-500">Inventário e movimentações registrados no sistema.</p><Feedback error={error}/>{loading&&<p role="status">Carregando indicadores...</p>}{data&&<><div className="grid grid-cols-2 xl:grid-cols-5 gap-4">{[['Armamentos',data.total],['Em uso',data.uso],['Em manutenção',data.manutencao],['Em estoque',data.estoque],['Munições em estoque',data.municoes]].map(([label,value])=><div key={label} className="card"><p className="text-sm text-gray-500">{label}</p><p className="text-4xl font-black text-ssp-navy mt-2">{Number(value).toLocaleString('pt-BR')}</p></div>)}</div><div className="grid xl:grid-cols-3 gap-6"><section className="card xl:col-span-2"><h2 className="font-bold mb-4">Retiradas e devoluções nos últimos seis meses</h2><div className="h-80"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.chart}><CartesianGrid strokeDasharray="3 3"/><XAxis dataKey="name"/><YAxis allowDecimals={false}/><Tooltip/><Area type="monotone" name="Retiradas" dataKey="retiradas" stroke="#1B365D" fill="#1B365D" fillOpacity={0.12}/><Area type="monotone" name="Devoluções" dataKey="devolucoes" stroke="#16a34a" fill="#16a34a" fillOpacity={0.12}/></AreaChart></ResponsiveContainer></div></section><section className="card"><h2 className="font-bold mb-4">Alertas ativos</h2>{data.alerts.length?data.alerts.slice(0,8).map((item:Row)=><Link className="block rounded-xl border p-3 mb-3 hover:bg-gray-50" key={item.key} to={item.href}><strong>{item.title}</strong><p className="text-sm text-gray-500">{item.message}</p></Link>):<p className="text-gray-500">Nenhum alerta ativo.</p>}<Link className="text-ssp-navy font-bold" to="/configuracoes">Configurar alertas</Link></section></div><section className="card"><h2 className="font-bold mb-3">Últimas movimentações</h2>{data.recent.length?data.recent.map((row:Row)=><div className="border-t py-3" key={row.id}>{date(row.data)} · {row.tipo} · {row.armament?.numSerie||row.ammunition?.tipo} · {row.responsible?.nome||'—'}</div>):<p>Nenhuma movimentação registrada.</p>}<Link className="font-bold text-ssp-navy" to="/movimentacoes">Ver histórico completo</Link></section></>}</div>
+
+export const Dashboard = () => {
+  const { data, error, loading, reload } = useData<Row>('/dashboard')
+  const indicators = data ? [
+    ['Armamentos', data.total, '/armamentos'],
+    ['Pistolas', data.pistolas, '/armamentos?busca=pistola'],
+    ['Pistolas em estoque', data.pistolasEmEstoque, '/armamentos?busca=pistola'],
+    ['Armas em uso', data.uso, '/armamentos'],
+    ['Armas em manutenção', data.manutencao, '/armamentos'],
+    ['Armas em estoque', data.estoque, '/armamentos'],
+    ['Munições em estoque', data.municoes, '/municoes'],
+    ['Coletes', data.coletes, '/coletes'],
+    ['Coletes em estoque', data.coletesEmEstoque, '/coletes'],
+    ['Coletes em uso', data.coletesEmUso, '/coletes'],
+  ] : []
+  return <div className="space-y-6">
+    <div className="flex flex-wrap justify-between gap-3"><h1 className="text-3xl font-black text-ssp-navy">Painel central</h1><button className="btn-secondary" onClick={() => void reload()}>Atualizar dados</button></div>
+    <p className="text-gray-500">Quantidades atuais de armas, munições e coletes registrados no sistema.</p>
+    <Feedback error={error} />{loading && <p role="status">Carregando indicadores...</p>}
+    {data && <><div className="grid grid-cols-2 xl:grid-cols-5 gap-4">{indicators.map(([label, value, href]) => <Link to={String(href)} key={String(label)} className="card hover:border-ssp-navy"><p className="text-sm text-gray-500">{label}</p><p className="text-4xl font-black text-ssp-navy mt-2">{Number(value || 0).toLocaleString('pt-BR')}</p></Link>)}</div>
+      <div className="grid xl:grid-cols-3 gap-6"><section className="card xl:col-span-2"><h2 className="font-bold mb-4">Retiradas e devoluções nos últimos seis meses</h2><div className="h-80"><ResponsiveContainer width="100%" height="100%"><AreaChart data={data.chart}><CartesianGrid strokeDasharray="3 3" /><XAxis dataKey="name" /><YAxis allowDecimals={false} /><Tooltip /><Area type="monotone" name="Retiradas" dataKey="retiradas" stroke="#1B365D" fill="#1B365D" fillOpacity={0.12} /><Area type="monotone" name="Devoluções" dataKey="devolucoes" stroke="#16a34a" fill="#16a34a" fillOpacity={0.12} /></AreaChart></ResponsiveContainer></div></section>
+        <section className="card"><h2 className="font-bold mb-4">Alertas ativos</h2>{data.alerts.length ? data.alerts.slice(0, 8).map((item: Row) => <Link className="block rounded-xl border p-3 mb-3 hover:bg-gray-50" key={item.key} to={item.href}><strong>{item.title}</strong><p className="text-sm text-gray-500">{item.message}</p></Link>) : <p className="text-gray-500">Nenhum alerta ativo.</p>}<Link className="text-ssp-navy font-bold" to="/configuracoes">Configurar alertas</Link></section>
+      </div>
+      <section className="card"><h2 className="font-bold mb-3">Últimas movimentações</h2>{data.recent.length ? data.recent.map((row: Row) => <div className="border-t py-3" key={row.id}>{date(row.data)} · {row.tipo} · {row.armament?.numSerie || (row.vest ? `Colete ${row.vest.numPatrimonio}` : row.ammunition?.tipo)} {row.quantidade ? `· ${row.quantidade} unidades` : ''} · {row.responsible?.nome || '—'}</div>) : <p>Nenhuma movimentação registrada.</p>}<Link className="font-bold text-ssp-navy" to="/movimentacoes">Ver histórico completo</Link></section>
+    </>}
+  </div>
 }

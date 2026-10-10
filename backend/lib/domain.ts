@@ -19,10 +19,23 @@ export const statuses = ['ESTOQUE', 'USO', 'MANUTENCAO', 'BLOQUEADA', 'BAIXADA']
 export const roleNames = ['ADMIN', 'GESTOR_ARMARIA', 'OPERADOR', 'AUDITOR'] as const
 export const armamentSchema = z.object({ tipo: text, marca: text, modelo: text, calibre: text, numSerie: text, numRegistro: text, dataAquisicao: z.coerce.date().default(() => new Date()), local: text.default('Armaria Central'), status: z.enum(statuses).default('ESTOQUE'), observacoes: optionalText, dataManutencao: z.coerce.date().nullable().optional() }).strict()
 export const ammunitionSchema = z.object({ tipo: text, calibre: text, quantidade: z.coerce.number().int().min(0).max(2147483647).default(0) }).strict()
+export const vestSchema = z.object({ marca: text, modelo: text, tamanho: text, nivelProtecao: text, numSerie: text, numPatrimonio: text, dataAquisicao: z.coerce.date().default(() => new Date()), dataFabricacao: z.coerce.date().nullable().optional(), dataValidade: z.coerce.date().nullable().optional(), dataManutencao: z.coerce.date().nullable().optional(), local: text.default('Armaria Central'), status: z.enum(statuses).default('ESTOQUE'), observacoes: optionalText }).strict()
+export const armamentBatchSchema = z.object({
+  quantidade: z.coerce.number().int().min(1).max(100),
+  dados: armamentSchema.omit({ numSerie: true, numRegistro: true }).extend({ status: z.enum(['ESTOQUE', 'BLOQUEADA', 'BAIXADA']).default('ESTOQUE') }),
+  unidades: z.array(z.object({ numSerie: text, numRegistro: text }).strict()).min(1).max(100),
+}).strict().superRefine((value, ctx) => {
+  if (value.quantidade !== value.unidades.length) ctx.addIssue({ code: 'custom', path: ['unidades'], message: 'Informe série e registro para cada unidade da quantidade indicada.' })
+  for (const key of ['numSerie', 'numRegistro'] as const) if (new Set(value.unidades.map(unit => unit[key])).size !== value.unidades.length) ctx.addIssue({ code: 'custom', path: ['unidades'], message: `Cada ${key} deve ser único no lote.` })
+})
+export const ammunitionEntrySchema = z.object({ quantidade: z.coerce.number().int().min(1).max(2147483647), motivo: z.string().trim().min(1).max(2000) }).strict()
+export function validateVestDates(value: { dataFabricacao?: Date | null; dataValidade?: Date | null }) {
+  if (value.dataFabricacao && value.dataValidade && value.dataFabricacao > value.dataValidade) throw new HttpError(400, 'Validade deve ser posterior ou igual à fabricação.')
+}
 export const responsibleSchema = z.object({ nome: text, identificacaoFuncional: text, setor: text }).strict()
 export const settingsSchema = z.object({ unidade: text.default('AtivoControl'), sigla: text.default('ATIVO'), endereco: z.string().trim().max(300).default(''), telefone: z.string().trim().max(40).default(''), baixoEstoque: z.coerce.number().int().min(0).max(1000000).default(100), prazoDevolucao: z.coerce.number().int().min(1).max(365).default(7), diasManutencao: z.coerce.number().int().min(1).max(3650).default(180) }).strict()
 export const preferencesSchema = z.object({ manutencao: z.boolean().default(true), estoque: z.boolean().default(true), devolucao: z.boolean().default(true) }).strict()
-export const movementSchema = z.object({ tipo: z.enum(['RETIRADA', 'DEVOLUCAO', 'TRANSFERENCIA', 'MANUTENCAO']), motivo: z.string().trim().min(1).max(2000), armamentId: idSchema.optional().nullable(), ammunitionId: idSchema.optional().nullable(), responsibleId: idSchema.optional().nullable(), quantidade: z.coerce.number().int().min(1).max(2147483647).optional(), destino: optionalText }).strict()
+export const movementSchema = z.object({ tipo: z.enum(['RETIRADA', 'DEVOLUCAO', 'TRANSFERENCIA', 'MANUTENCAO', 'ENTRADA']), motivo: z.string().trim().min(1).max(2000), armamentId: idSchema.optional().nullable(), ammunitionId: idSchema.optional().nullable(), vestId: idSchema.optional().nullable(), responsibleId: idSchema.optional().nullable(), quantidade: z.coerce.number().int().min(1).max(2147483647).optional(), destino: optionalText }).strict()
 
 export async function transaction<T>(operation: (tx: Prisma.TransactionClient) => Promise<T>) {
   for (let attempt = 0; ; attempt++) {

@@ -25,6 +25,7 @@ async function main() {
       ['/', '02-dashboard', 'Painel Central'],
       ['/armamentos', '03-armamentos', 'Arsenal de Armas'],
       ['/municoes', '04-municoes', 'Lotes de Munição'],
+      ['/coletes', '11-coletes', 'Coletes'],
       ['/responsaveis', '05-responsaveis', 'Agentes Autorizados'],
       ['/movimentacoes', '06-movimentacoes', 'Carga/Descarga'],
       ['/relatorios', '07-relatorios', 'Auditoria e Relatórios'],

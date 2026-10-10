@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, Shield, Package, ArrowLeftRight, UserCheck, FileBarChart, Power, Target, Settings } from 'lucide-react';
+import { LayoutDashboard, Shield, Shirt, Package, ArrowLeftRight, UserCheck, FileBarChart, Power, Target, Settings } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useEffect, useState } from 'react';
 
@@ -12,6 +12,7 @@ export const Sidebar = () => {
     { icon: LayoutDashboard, label: 'Painel Central', path: '/' },
     { icon: Shield, label: 'Arsenal de Armas', path: '/armamentos' },
     { icon: Package, label: 'Lotes de Munição', path: '/municoes' },
+    { icon: Shirt, label: 'Coletes', path: '/coletes' },
     { icon: ArrowLeftRight, label: 'Carga/Descarga', path: '/movimentacoes' },
     { icon: UserCheck, label: 'Agentes Autorizados', path: '/responsaveis' },
     { icon: FileBarChart, label: 'Auditoria e Relatórios', path: '/relatorios' },

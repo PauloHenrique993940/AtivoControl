@@ -21,7 +21,7 @@ Entre com um usuário cadastrado. O seed cria o administrador com as variáveis 
 
 ## Painel central
 
-Cartões mostram total de armamentos, em uso, manutenção, estoque e quantidade de munições. O gráfico usa as movimentações dos últimos seis meses; alertas dependem dos parâmetros e preferências salvos.
+Cartões mostram armamentos, pistolas, coletes e quantidade de munições, com indicadores de estoque e uso. O gráfico usa as movimentações dos últimos seis meses; alertas dependem dos parâmetros e preferências salvos.
 
 ![Painel](media/02-dashboard.png)
 
@@ -29,13 +29,25 @@ Cartões mostram total de armamentos, em uso, manutenção, estoque e quantidade
 
 Cadastre tipo, marca, modelo, calibre, série, registro, aquisição, local e observações. Série e registro são únicos. Edite os dados ou abra Detalhes para consultar o histórico. Uso/manutenção são alterados pelas movimentações. Exclusão é permitida somente sem histórico; use bloqueio ou baixa para preservar registros vinculados.
 
+Para adicionar várias pistolas, use o cadastro em lote. Informe a quantidade (até 100), preencha os dados comuns e a série/registro de cada unidade. Cada pistola permanece identificada individualmente. Se houver uma identificação repetida ou inválida, nenhuma unidade daquele lote é salva. As quantidades exibidas são calculadas pela contagem dos registros, incluindo as unidades cadastradas em lote.
+
 ![Armamentos](media/03-armamentos.png)
 
 ## Munições
 
-Cadastre tipo, calibre e quantidade. Edite, pesquise, abra detalhes ou exclua lotes sem histórico. Retirada reduz o estoque; devolução repõe a quantidade e é limitada ao saldo retirado pelo responsável. Ajustes manuais do cadastro são auditados.
+Cadastre tipo, calibre e quantidade inicial. Para acrescentar munição a um cadastro existente, abra a opção de entrada e informe a quantidade recebida e o motivo. A quantidade é somada ao estoque e a entrada fica no histórico com seu autor; administrador e gestor podem registrar recebimentos.
+
+Edite, pesquise, abra detalhes ou exclua lotes sem histórico. Retirada reduz o estoque; devolução repõe a quantidade e é limitada ao saldo retirado pelo responsável. Entradas não contam como retirada de um responsável. Ajustes manuais do cadastro são auditados.
 
 ![Munições](media/04-municoes.png)
+
+## Coletes
+
+Cadastre marca, modelo, tamanho (por exemplo, P, M, G ou GG), nível de proteção, número de série e patrimônio. Registre aquisição, local, observações e, quando disponíveis, fabricação, validade e última manutenção. Série e patrimônio são únicos; fabricação deve ser anterior ou igual à validade.
+
+Use Detalhes para consultar os dados e o histórico, ou Editar para corrigir tamanho e demais informações. Um colete vencido não pode ser retirado; a data de validade é comparada ao dia atual no fuso do Brasil. Retirada, devolução, transferência e manutenção usam o mesmo fluxo dos armamentos, escolhendo a categoria colete. Exclusão é permitida somente sem movimentações.
+
+![Coletes](media/11-coletes.png)
 
 ## Responsáveis
 
@@ -45,13 +57,13 @@ Cadastre nome, identificação funcional única e setor. Edite ou consulte os de
 
 ## Movimentações
 
-Escolha armamento ou munição, operação e motivo. Retirada/devolução exigem responsável; munição exige quantidade. Transferência de armamento exige destino. Retirada altera status para `USO`, devolução para `ESTOQUE`, manutenção para `MANUTENCAO`; devolução da manutenção registra a data da revisão. O usuário autor vem da sessão. Estoque, registro e auditoria são salvos juntos.
+Escolha armamento, colete ou munição, operação e motivo. Retirada/devolução exigem responsável; munição exige quantidade. Entrada é exclusiva de munição e de administrador/gestor. Transferência de armamento ou colete exige destino. Retirada altera status para `USO`, devolução para `ESTOQUE`, manutenção para `MANUTENCAO`; devolução da manutenção registra a data da revisão. O usuário autor vem da sessão. Estoque, registro e auditoria são salvos juntos.
 
 ![Movimentações](media/06-movimentacoes.png)
 
 ## Relatórios
 
-Selecione o período e baixe PDF ou Excel de armamentos, munições, responsáveis, movimentações e auditoria. Inventários mostram a posição atual; o período filtra histórico e auditoria. O operador não acessa auditoria. A tabela de eventos tem paginação; a impressão da página também está disponível.
+Selecione o período e baixe PDF ou Excel de armamentos, coletes, munições, responsáveis, movimentações e auditoria. Inventários mostram a posição atual; o período filtra histórico e auditoria. O operador não acessa auditoria. A tabela de eventos tem paginação; a impressão da página também está disponível.
 
 ![Relatórios](media/07-relatorios.png)
 

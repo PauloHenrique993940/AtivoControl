@@ -66,6 +66,27 @@ model Responsible {
   movements Movement[]
 }
 
+model Vest {
+  id                 String   @id @default(uuid())
+  marca              String
+  modelo             String
+  tamanho            String
+  nivelProtecao      String
+  numSerie           String   @unique
+  numPatrimonio      String   @unique
+  dataAquisicao      DateTime
+  dataFabricacao     DateTime?
+  dataValidade       DateTime?
+  dataManutencao     DateTime?
+  local              String
+  status             String   @default("ESTOQUE")
+  observacoes        String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  movements Movement[]
+}
+
 model Movement {
   id            String   @id @default(uuid())
   tipo          String   // RETIRADA, DEVOLUCAO, TRANSFERENCIA, MANUTENCAO
@@ -79,6 +100,9 @@ model Movement {
   
   ammunitionId  String?
   ammunition    Ammunition? @relation(fields: [ammunitionId], references: [id], onDelete: Restrict)
+
+  vestId        String?
+  vest          Vest? @relation(fields: [vestId], references: [id], onDelete: Restrict)
   
   responsibleId String?
   responsible   Responsible? @relation(fields: [responsibleId], references: [id], onDelete: Restrict)
@@ -88,6 +112,7 @@ model Movement {
 
   createdAt     DateTime @default(now())
   @@index([armamentId, data])
+  @@index([vestId, data])
   @@index([ammunitionId, responsibleId])
   @@index([data])
 }

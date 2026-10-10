@@ -7,7 +7,7 @@ import { audit, dateFilter, settings } from '../lib/domain'
 import { movementInclude } from './movements'
 
 export async function exportReport(req: Request, res: Response) {
-  const type = z.enum(['armamentos', 'municoes', 'responsaveis', 'movimentacoes', 'auditoria']).parse(req.params.tipo)
+  const type = z.enum(['armamentos', 'municoes', 'coletes', 'responsaveis', 'movimentacoes', 'auditoria']).parse(req.params.tipo)
   const format = z.enum(['pdf', 'xlsx']).parse(req.params.formato)
   const range = dateFilter(req)
   let columns: string[] = [], rows: (string | number)[][] = []
@@ -16,11 +16,15 @@ export async function exportReport(req: Request, res: Response) {
     rows = (await prisma.armament.findMany({ orderBy: { numSerie: 'asc' } })).map(r => [r.tipo, r.marca, r.modelo, r.calibre, r.numSerie, r.numRegistro, r.local, r.status])
   } else if (type === 'municoes') {
     columns = ['Tipo', 'Calibre', 'Quantidade']; rows = (await prisma.ammunition.findMany({ orderBy: { tipo: 'asc' } })).map(r => [r.tipo, r.calibre, r.quantidade])
+  } else if (type === 'coletes') {
+    const date = (value: Date | null) => value ? value.toLocaleDateString('pt-BR', { timeZone: 'UTC' }) : ''
+    columns = ['Marca', 'Modelo', 'Tamanho', 'Proteção', 'Série', 'Patrimônio', 'Aquisição', 'Fabricação', 'Validade', 'Local', 'Status']
+    rows = (await prisma.vest.findMany({ orderBy: { numSerie: 'asc' } })).map(r => [r.marca, r.modelo, r.tamanho, r.nivelProtecao, r.numSerie, r.numPatrimonio, date(r.dataAquisicao), date(r.dataFabricacao), date(r.dataValidade), r.local, r.status])
   } else if (type === 'responsaveis') {
     columns = ['Nome', 'Identificação', 'Setor']; rows = (await prisma.responsible.findMany({ orderBy: { nome: 'asc' } })).map(r => [r.nome, r.identificacaoFuncional, r.setor])
   } else if (type === 'movimentacoes') {
     columns = ['Data', 'Tipo', 'Ativo', 'Quantidade', 'Responsável', 'Usuário', 'Destino', 'Motivo']
-    rows = (await prisma.movement.findMany({ where: { data: range }, orderBy: { data: 'desc' }, include: movementInclude })).map(r => [r.data.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), r.tipo, r.armament?.numSerie || `${r.ammunition?.tipo || ''} ${r.ammunition?.calibre || ''}`, r.quantidade || '', r.responsible?.nome || '', r.user.name, r.destino || '', r.motivo || ''])
+    rows = (await prisma.movement.findMany({ where: { data: range }, orderBy: { data: 'desc' }, include: movementInclude })).map(r => [r.data.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), r.tipo, r.armament?.numSerie || (r.vest ? `Colete ${r.vest.numSerie} · ${r.vest.tamanho}` : `${r.ammunition?.tipo || ''} ${r.ammunition?.calibre || ''}`), r.quantidade || 1, r.responsible?.nome || '', r.user.name, r.destino || '', r.motivo || ''])
   } else {
     columns = ['Data', 'Ação', 'Usuário', 'Detalhes']; rows = (await prisma.auditLog.findMany({ where: { data: range }, orderBy: { data: 'desc' }, include: { user: { select: { name: true } } } })).map(r => [r.data.toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' }), r.acao, r.user.name, r.detalhes])
   }

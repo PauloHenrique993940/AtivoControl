@@ -5,7 +5,7 @@ import { rateLimit } from 'express-rate-limit'
 import { z } from 'zod'
 import prisma from '../lib/prisma'
 import { authMiddleware } from '../middlewares/auth.middleware'
-import { audit, armamentSchema, ammunitionSchema, responsibleSchema, movementSchema, transaction, route, roles, managers, operators, userSelect, HttpError, id, text, roleNames, settings, settingsSchema, preferencesSchema, dateFilter } from '../lib/domain'
+import { audit, armamentSchema, armamentBatchSchema, ammunitionSchema, ammunitionEntrySchema, vestSchema, validateVestDates, responsibleSchema, movementSchema, transaction, route, roles, managers, operators, userSelect, HttpError, id, text, roleNames, settings, settingsSchema, preferencesSchema, dateFilter } from '../lib/domain'
 import { registerMovement, movementInclude } from '../services/movements'
 import { dashboard, notifications } from '../services/overview'
 import { exportReport } from '../services/reports'
@@ -44,12 +44,28 @@ router.post('/auth/logout', route(async (req, res) => { await prisma.user.update
 router.put('/auth/preferences', route(async (req, res) => { const input = preferencesSchema.parse(req.body); res.json(await transaction(async tx => { const result = await tx.user.update({ where: { id: req.userId }, data: { preferences: input }, select: userSelect }); await audit(tx, req.userId, 'ALTERAR_PREFERENCIAS', JSON.stringify(input)); return result })) }))
 
 // Cadastros compartilham validação, transação e auditoria.
-for (const [path, model, schema] of [['armamentos', 'armament', armamentSchema], ['municoes', 'ammunition', ammunitionSchema], ['responsaveis', 'responsible', responsibleSchema]] as const) {
+router.post('/armamentos/lote', roles(...managers), route(async (req, res) => {
+  const input = armamentBatchSchema.parse(req.body)
+  const result = await transaction(async tx => {
+    const items = await tx.armament.createManyAndReturn({ data: input.unidades.map(unit => ({ ...input.dados, ...unit })) })
+    await audit(tx, req.userId, 'CRIAR_LOTE_ARMAMENTOS', JSON.stringify({ quantidade: items.length, items }))
+    return { quantidade: items.length, items }
+  })
+  res.status(201).json(result)
+}))
+router.post('/municoes/:id/entrada', roles(...managers), route(async (req, res) => {
+  const ammunitionId = id(req)
+  const input = ammunitionEntrySchema.parse(req.body)
+  const movement = await registerMovement(req.userId, { ...input, tipo: 'ENTRADA', ammunitionId })
+  res.status(201).json(movement.ammunition)
+}))
+for (const [path, model, schema] of [['armamentos', 'armament', armamentSchema], ['municoes', 'ammunition', ammunitionSchema], ['coletes', 'vest', vestSchema], ['responsaveis', 'responsible', responsibleSchema]] as const) {
   router.get(`/${path}`, route(async (_req, res) => { const delegate = (prisma as any)[model]; res.json(await delegate.findMany({ orderBy: { createdAt: 'desc' } })) }))
   router.get(`/${path}/:id`, route(async (req, res) => { const delegate = (prisma as any)[model]; const record = await delegate.findUnique({ where: { id: id(req) }, include: { movements: { include: movementInclude, orderBy: { data: 'desc' } } } }); if (!record) throw new HttpError(404, 'Registro não encontrado.'); res.json(record) }))
   router.post(`/${path}`, roles(...managers), route(async (req, res) => {
     const input = schema.parse(req.body)
-    if (model === 'armament' && 'status' in input && ['USO', 'MANUTENCAO'].includes(input.status)) throw new HttpError(400, 'Cadastre em estoque e registre a movimentação.')
+    if (['armament', 'vest'].includes(model) && 'status' in input && ['USO', 'MANUTENCAO'].includes(input.status)) throw new HttpError(400, 'Cadastre em estoque e registre a movimentação.')
+    if (model === 'vest') validateVestDates(input as z.infer<typeof vestSchema>)
     const result = await transaction(async tx => { const record = await (tx as any)[model].create({ data: input }); await audit(tx, req.userId, `CRIAR_${path.toUpperCase()}`, JSON.stringify(record)); return record })
     res.status(201).json(result)
   }))
@@ -60,14 +76,15 @@ for (const [path, model, schema] of [['armamentos', 'armament', armamentSchema],
     const recordId = id(req)
     res.json(await transaction(async tx => {
       const delegate = (tx as any)[model]; const current = await delegate.findUnique({ where: { id: recordId } }); if (!current) throw new HttpError(404, 'Registro não encontrado.')
-      if (model === 'armament' && 'status' in input && input.status !== current.status && (['USO', 'MANUTENCAO'].includes(current.status) || ['USO', 'MANUTENCAO'].includes(input.status!))) throw new HttpError(409, 'Altere uso ou manutenção pela tela de movimentações.')
+      if (['armament', 'vest'].includes(model) && 'status' in input && input.status !== current.status && (['USO', 'MANUTENCAO'].includes(current.status) || ['USO', 'MANUTENCAO'].includes(input.status!))) throw new HttpError(409, 'Altere uso ou manutenção pela tela de movimentações.')
+      if (model === 'vest') validateVestDates({ ...current, ...input })
       const record = await delegate.update({ where: { id: recordId }, data: input }); await audit(tx, req.userId, `ATUALIZAR_${path.toUpperCase()}`, JSON.stringify({ id: recordId, antes: current, depois: record })); return record
     }))
   }))
   router.delete(`/${path}/:id`, roles(...managers), route(async (req, res) => {
     const recordId = id(req)
     await transaction(async tx => {
-      const relation = { armament: 'armamentId', ammunition: 'ammunitionId', responsible: 'responsibleId' }[model]
+      const relation = { armament: 'armamentId', ammunition: 'ammunitionId', vest: 'vestId', responsible: 'responsibleId' }[model]
       if (await tx.movement.count({ where: { [relation]: recordId } })) throw new HttpError(409, 'Registro possui movimentações. O histórico deve ser preservado.')
       const record = await (tx as any)[model].delete({ where: { id: recordId } }); await audit(tx, req.userId, `EXCLUIR_${path.toUpperCase()}`, JSON.stringify(record))
     })
@@ -75,7 +92,11 @@ for (const [path, model, schema] of [['armamentos', 'armament', armamentSchema],
   }))
 }
 router.get('/movimentacoes', route(async (req, res) => res.json(await prisma.movement.findMany({ where: { data: dateFilter(req) }, include: movementInclude, orderBy: { data: 'desc' } }))))
-router.post('/movimentacoes', roles(...operators), route(async (req, res) => res.status(201).json(await registerMovement(req.userId, movementSchema.parse(req.body)))))
+router.post('/movimentacoes', roles(...operators), route(async (req, res) => {
+  const input = movementSchema.parse(req.body)
+  if (input.tipo === 'ENTRADA' && !managers.includes(req.userRole)) throw new HttpError(403, 'Seu perfil não tem permissão para registrar entradas de estoque.')
+  res.status(201).json(await registerMovement(req.userId, input))
+}))
 router.get('/dashboard', route(async (req, res) => res.json(await dashboard(req.userId))))
 router.get('/notifications', route(async (req, res) => res.json(await notifications(req.userId))))
 router.post('/notifications/read', route(async (req, res) => {
@@ -97,8 +118,8 @@ router.get('/audit', roles('ADMIN', 'GESTOR_ARMARIA', 'AUDITOR'), route(async (r
 }))
 router.get('/search', route(async (req, res) => {
   const query = z.object({ term: z.string().trim().min(2).max(100) }).parse(req.query); const contains = { contains: query.term, mode: 'insensitive' as const }
-  const [arms, ammo, people] = await Promise.all([prisma.armament.findMany({ where: { OR: ['tipo', 'marca', 'modelo', 'numSerie', 'numRegistro', 'calibre', 'local'].map(key => ({ [key]: contains })) }, take: 15 }), prisma.ammunition.findMany({ where: { OR: [{ tipo: contains }, { calibre: contains }] }, take: 15 }), prisma.responsible.findMany({ where: { OR: [{ nome: contains }, { identificacaoFuncional: contains }, { setor: contains }] }, take: 15 })])
-  res.json([...arms.map(r => ({ id: r.id, label: `${r.tipo} ${r.numSerie}`, href: `/armamentos?busca=${encodeURIComponent(query.term)}` })), ...ammo.map(r => ({ id: r.id, label: `${r.tipo} ${r.calibre}`, href: `/municoes?busca=${encodeURIComponent(query.term)}` })), ...people.map(r => ({ id: r.id, label: r.nome, href: `/responsaveis?busca=${encodeURIComponent(query.term)}` }))])
+  const [arms, ammo, vests, people] = await Promise.all([prisma.armament.findMany({ where: { OR: ['tipo', 'marca', 'modelo', 'numSerie', 'numRegistro', 'calibre', 'local'].map(key => ({ [key]: contains })) }, take: 15 }), prisma.ammunition.findMany({ where: { OR: [{ tipo: contains }, { calibre: contains }] }, take: 15 }), prisma.vest.findMany({ where: { OR: ['marca', 'modelo', 'tamanho', 'nivelProtecao', 'numSerie', 'numPatrimonio', 'local'].map(key => ({ [key]: contains })) }, take: 15 }), prisma.responsible.findMany({ where: { OR: [{ nome: contains }, { identificacaoFuncional: contains }, { setor: contains }] }, take: 15 })])
+  res.json([...arms.map(r => ({ id: r.id, label: `${r.tipo} ${r.numSerie}`, href: `/armamentos?busca=${encodeURIComponent(query.term)}` })), ...ammo.map(r => ({ id: r.id, label: `${r.tipo} ${r.calibre}`, href: `/municoes?busca=${encodeURIComponent(query.term)}` })), ...vests.map(r => ({ id: r.id, label: `Colete ${r.numSerie} · ${r.tamanho}`, href: `/coletes?busca=${encodeURIComponent(query.term)}` })), ...people.map(r => ({ id: r.id, label: r.nome, href: `/responsaveis?busca=${encodeURIComponent(query.term)}` }))])
 }))
 router.get('/reports/:tipo/:formato', route(async (req, res) => { if (req.params.tipo === 'auditoria' && req.userRole === 'OPERADOR') throw new HttpError(403, 'Sem acesso à auditoria.'); return exportReport(req, res) }))
 router.get('/users', roles('ADMIN'), route(async (_req, res) => res.json(await prisma.user.findMany({ select: userSelect, orderBy: { name: 'asc' } }))))
